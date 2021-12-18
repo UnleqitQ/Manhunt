@@ -313,7 +313,7 @@ public class ManhuntManager implements Listener, TabExecutor {
 		ItemStack item = ev.getCurrentItem();
 		if (item != null && item.getType() == Material.PLAYER_HEAD) {
 			SkullMeta meta = (SkullMeta) item.getItemMeta();
-			if (meta.getOwningPlayer().isOnline()) {
+			if (meta.getOwningPlayer().isOnline() && hasInstance(ev.getWhoClicked().getUniqueId())) {
 				getInstance(ev.getWhoClicked().getUniqueId()).tracking.put(ev.getWhoClicked().getUniqueId(),
 						meta.getOwningPlayer().getUniqueId());
 				ev.getWhoClicked().closeInventory();

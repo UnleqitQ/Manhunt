@@ -22,6 +22,7 @@ public class ManhuntInstance {
 	private Set<UUID> runners;
 	public Map<UUID, UUID> tracking;
 	private Set<UUID> died;
+	private Location spawn;
 	
 	private boolean running;
 	private long startingTime;
@@ -149,10 +150,11 @@ public class ManhuntInstance {
 				}
 				((Player) player).getInventory().clear();
 				((Player) player).setGameMode(GameMode.SURVIVAL);
-				((Player) player).setBedSpawnLocation(location, true);
+				//((Player) player).setBedSpawnLocation(location);
 				((Player) player).giveExpLevels(-1000);
 			}
 		}
+		spawn = location;
 		startingTime = System.currentTimeMillis();
 		running = true;
 	}
@@ -161,6 +163,9 @@ public class ManhuntInstance {
 		return owner;
 	}
 	
+	public Location getSpawn() {
+		return spawn;
+	}
 	
 	public Set<UUID> getHunters() {
 		return hunters;

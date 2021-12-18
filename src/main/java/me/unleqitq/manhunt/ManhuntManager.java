@@ -8,10 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.OfflinePlayer;
+import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
@@ -22,6 +19,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -274,14 +272,37 @@ public class ManhuntManager implements Listener, TabExecutor {
 	public void track(Player player, Player target, ItemStack item) {
 		Location location = new Location(target.getWorld(), target.getLocation().getBlockX(), 255,
 				target.getLocation().getBlockZ());
-		trackedLocations.put(player.getUniqueId(), location);
+		boolean otherTracking = false;
+		for (Map.Entry<UUID, Location> entry : trackedLocations.entrySet()) {
+			if (!entry.getKey().equals(player.getUniqueId())) {
+				if (entry.getValue().equals(location)) {
+					otherTracking = true;
+					break;
+				}
+			}
+		}
+		if (!otherTracking) {
+			Location location0 = trackedLocations.get(player.getUniqueId());
+			if (location0 != null) {
+				location0.getBlock().setType(Material.AIR);
+			}
+		}
 		location.getBlock().setType(Material.LODESTONE);
 		CompassMeta compassMeta = (CompassMeta) item.getItemMeta();
 		compassMeta.setLodestone(location);
 		item.setItemMeta(compassMeta);
 		player.sendMessage("Tracking " + target.getName());
-		player.sendMessage("Lodestone: " + location.getBlock());
-		player.sendMessage("Compass: " + ((CompassMeta) item.getItemMeta()).getLodestone());
+		trackedLocations.put(player.getUniqueId(), location);
+	}
+	
+	@EventHandler
+	public void onBreak(BlockBreakEvent event) {
+		if (playerInstances.containsKey(event.getPlayer())) {
+			if (event.getBlock().getLocation().getBlockY() == 255 && event.getBlock().getType() == Material.LODESTONE) {
+				event.setCancelled(true);
+				event.getPlayer().sendMessage(ChatColor.RED + "Stop destroying the Lodestone");
+			}
+		}
 	}
 	
 	@EventHandler

@@ -107,14 +107,14 @@ public class ManhuntInstance {
 	}
 	
 	public void start(Location location) {
-		// if (hunters.size() == 0) {
-		// Bukkit.getPlayer(owner).sendMessage("You need at least 1 hunter");
-		// return;
-		// }
-		// if (runners.size() == 0) {
-		// Bukkit.getPlayer(owner).sendMessage("You need at least 1 runner");
-		// return;
-		// }
+		if (hunters.size() == 0) {
+			Bukkit.getPlayer(owner).sendMessage("You need at least 1 hunter");
+			return;
+		}
+		if (runners.size() == 0) {
+			Bukkit.getPlayer(owner).sendMessage("You need at least 1 runner");
+			return;
+		}
 		Bukkit.getPlayer(owner).sendMessage("Started manhunt");
 		UUID runner = (UUID) runners.toArray()[0];
 		for (UUID uuid : hunters) {

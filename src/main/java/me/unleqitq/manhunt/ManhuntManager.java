@@ -41,7 +41,7 @@ public class ManhuntManager implements Listener, TabExecutor {
 	
 	public ManhuntManager() {
 		Bukkit.getPluginManager().registerEvents(this, Manhunt.plugin);
-		instances = new HashSet();
+		instances = new HashSet<>();
 		playerInstances = new HashMap<>();
 		trackedLocations = new HashMap<>();
 	}
@@ -279,7 +279,9 @@ public class ManhuntManager implements Listener, TabExecutor {
 		CompassMeta compassMeta = (CompassMeta) item.getItemMeta();
 		compassMeta.setLodestone(location);
 		item.setItemMeta(compassMeta);
-		player.sendMessage("Tracking " + target.getDisplayName());
+		player.sendMessage("Tracking " + target.getName());
+		player.sendMessage("Lodestone: " + location.getBlock());
+		player.sendMessage("Compass: " + ((CompassMeta) item.getItemMeta()).getLodestone());
 	}
 	
 	@EventHandler

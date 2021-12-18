@@ -1,6 +1,5 @@
 package me.unleqitq.manhunt;
 
-import javax.annotation.Nonnull;
 
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandExecutor;
@@ -45,7 +44,6 @@ public class Manhunt extends JavaPlugin {
 		}
 	}
 	
-	@Nonnull
 	public <T extends CommandExecutor> void registerCommand(String cmd, T handler) {
 		getCommand(cmd).setExecutor((CommandExecutor) handler);
 	}

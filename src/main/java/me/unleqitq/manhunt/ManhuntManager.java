@@ -342,24 +342,7 @@ public class ManhuntManager implements Listener, TabExecutor {
 			}
 			final ManhuntInstance instance = getInstance(ev.getPlayer().getUniqueId());
 			if (instance.isRunning()) {
-				ev.getPlayer().sendMessage("YYYYYYYYYYYYY");
-				if (ev.getRespawnLocation().getBlock().getType().toString().toLowerCase().contains("bed")) {
-					if (ev.isAsynchronous()) {
-						Bukkit.getScheduler().runTask(Manhunt.plugin, () -> {
-							ev.getPlayer().sendMessage("XXXXXXXXXX");
-							//ev.getPlayer().setBedSpawnLocation(instance.getSpawn());
-							instance.getSpawn().getBlock().setType(Material.WHITE_BED);
-							ev.getPlayer().teleport(instance.getSpawn());
-							ev.setRespawnLocation(instance.getSpawn());
-						});
-					}
-					else {
-						ev.getPlayer().sendMessage("XXXXXXXXXX");
-						//ev.getPlayer().setBedSpawnLocation(instance.getSpawn());
-						instance.getSpawn().getBlock().setType(Material.WHITE_BED);
-						ev.getPlayer().teleport(instance.getSpawn());
-						ev.setRespawnLocation(instance.getSpawn());
-					}
+				if (ev.getPlayer().getBedSpawnLocation() == null) {
 					Bukkit.getScheduler().runTaskLater(Manhunt.plugin, () -> {
 						ev.getPlayer().teleport(instance.getSpawn());
 					}, 10);
@@ -371,7 +354,6 @@ public class ManhuntManager implements Listener, TabExecutor {
 					}, 30);
 					Bukkit.getScheduler().runTaskLater(Manhunt.plugin, () -> {
 						ev.getPlayer().teleport(instance.getSpawn());
-						instance.getSpawn().getBlock().setType(Material.AIR);
 					}, 40);
 				}
 			}

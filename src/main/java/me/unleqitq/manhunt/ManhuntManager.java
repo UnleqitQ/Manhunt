@@ -1,15 +1,6 @@
 package me.unleqitq.manhunt;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-
 import org.bukkit.*;
-import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
@@ -30,6 +21,8 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.CompassMeta;
 import org.bukkit.inventory.meta.SkullMeta;
+
+import java.util.*;
 
 
 public class ManhuntManager implements Listener, TabExecutor {
@@ -285,11 +278,12 @@ public class ManhuntManager implements Listener, TabExecutor {
 		if (!otherTracking) {
 			Location location0 = trackedLocations.get(player.getUniqueId());
 			if (location0 != null) {
-				location0.getBlock().setType(Material.AIR);
+				//location0.getBlock().setType(Material.AIR);
 			}
 		}
-		location.getBlock().setType(Material.LODESTONE);
+		//location.getBlock().setType(Material.LODESTONE);
 		CompassMeta compassMeta = (CompassMeta) item.getItemMeta();
+		compassMeta.setLodestoneTracked(true);
 		compassMeta.setLodestone(location);
 		item.setItemMeta(compassMeta);
 		player.sendMessage("Tracking " + target.getName());

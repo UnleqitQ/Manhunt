@@ -1,18 +1,14 @@
 package me.unleqitq.manhunt;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-
 import org.bukkit.*;
 import org.bukkit.advancement.Advancement;
 import org.bukkit.advancement.AdvancementProgress;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+
+import java.util.*;
 
 
 public class ManhuntInstance {
@@ -122,36 +118,54 @@ public class ManhuntInstance {
 			tracking.put(uuid, runner);
 		}
 		for (UUID uuid : hunters) {
-			OfflinePlayer player = Bukkit.getOfflinePlayer(uuid);
-			if (player.isOnline()) {
+			Player player = Bukkit.getPlayer(uuid);
+			if (player != null) {
 				for (Iterator<Advancement> iterator = Bukkit.advancementIterator(); iterator.hasNext(); ) {
 					Advancement advancement = iterator.next();
-					AdvancementProgress progress = ((Player) player).getAdvancementProgress(advancement);
+					AdvancementProgress progress = player.getAdvancementProgress(advancement);
 					for (String criteria : progress.getAwardedCriteria())
 						progress.revokeCriteria(criteria);
 				}
-				((Player) player).getInventory().clear();
+				player.getInventory().clear();
 				ItemStack compass = new ItemStack(Material.COMPASS);
 				compass.addEnchantment(Enchantment.VANISHING_CURSE, 1);
-				((Player) player).getInventory().addItem(compass);
-				((Player) player).setGameMode(GameMode.SURVIVAL);
-				((Player) player).setBedSpawnLocation(location, true);
-				((Player) player).giveExpLevels(-1000);
+				player.getInventory().addItem(compass);
+				player.setGameMode(GameMode.SURVIVAL);
+				player.setInvisible(false);
+				player.setInvulnerable(false);
+				player.setAllowFlight(false);
+				player.setBedSpawnLocation(location, true);
+				player.giveExpLevels(-1000);
+				player.setHealth(player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
+				player.setSaturation(5);
+				player.setFoodLevel(20);
+				player.setExhaustion(0);
+				player.setSaturatedRegenRate(10);
+				player.teleport(location);
 			}
 		}
 		for (UUID uuid : runners) {
-			OfflinePlayer player = Bukkit.getOfflinePlayer(uuid);
-			if (player.isOnline()) {
+			Player player = Bukkit.getPlayer(uuid);
+			if (player != null) {
 				for (Iterator<Advancement> iterator = Bukkit.advancementIterator(); iterator.hasNext(); ) {
 					Advancement advancement = iterator.next();
-					AdvancementProgress progress = ((Player) player).getAdvancementProgress(advancement);
+					AdvancementProgress progress = player.getAdvancementProgress(advancement);
 					for (String criteria : progress.getAwardedCriteria())
 						progress.revokeCriteria(criteria);
 				}
-				((Player) player).getInventory().clear();
-				((Player) player).setGameMode(GameMode.SURVIVAL);
-				//((Player) player).setBedSpawnLocation(location);
-				((Player) player).giveExpLevels(-1000);
+				player.getInventory().clear();
+				player.setGameMode(GameMode.SURVIVAL);
+				player.setInvisible(false);
+				player.setInvulnerable(false);
+				player.setAllowFlight(false);
+				player.setBedSpawnLocation(location, true);
+				player.giveExpLevels(-1000);
+				player.setHealth(player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
+				player.setSaturation(5);
+				player.setFoodLevel(20);
+				player.setExhaustion(0);
+				player.setSaturatedRegenRate(10);
+				player.teleport(location);
 			}
 		}
 		spawn = location;
@@ -203,7 +217,7 @@ public class ManhuntInstance {
 	public void onHuntersWin() {
 		finished = true;
 		for (UUID uuid : hunters) {
-			if (Bukkit.getOfflinePlayer(uuid).isOnline()) {
+			if (Bukkit.getPlayer(uuid) != null) {
 				Player player = Bukkit.getPlayer(uuid);
 				player.sendMessage(
 						ChatColor.RED + "" + ChatColor.BOLD + "================================================================");
@@ -215,7 +229,7 @@ public class ManhuntInstance {
 			}
 		}
 		for (UUID uuid : runners) {
-			if (Bukkit.getOfflinePlayer(uuid).isOnline()) {
+			if (Bukkit.getPlayer(uuid) != null) {
 				Player player = Bukkit.getPlayer(uuid);
 				player.sendMessage(
 						ChatColor.RED + "" + ChatColor.BOLD + "================================================================");
@@ -233,7 +247,7 @@ public class ManhuntInstance {
 		finished = true;
 		runnerWon = true;
 		for (UUID uuid : runners) {
-			if (Bukkit.getOfflinePlayer(uuid).isOnline()) {
+			if (Bukkit.getPlayer(uuid) != null) {
 				Player player = Bukkit.getPlayer(uuid);
 				player.sendMessage(
 						ChatColor.RED + "" + ChatColor.BOLD + "================================================================");
@@ -245,7 +259,7 @@ public class ManhuntInstance {
 			}
 		}
 		for (UUID uuid : hunters) {
-			if (Bukkit.getOfflinePlayer(uuid).isOnline()) {
+			if (Bukkit.getPlayer(uuid) != null) {
 				Player player = Bukkit.getPlayer(uuid);
 				player.sendMessage(
 						ChatColor.RED + "" + ChatColor.BOLD + "================================================================");

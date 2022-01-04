@@ -283,7 +283,7 @@ public class ManhuntManager implements Listener, TabExecutor {
 		}
 		//location.getBlock().setType(Material.LODESTONE);
 		CompassMeta compassMeta = (CompassMeta) item.getItemMeta();
-		compassMeta.setLodestoneTracked(true);
+		compassMeta.setLodestoneTracked(false);
 		compassMeta.setLodestone(location);
 		item.setItemMeta(compassMeta);
 		player.sendMessage("Tracking " + target.getName());
@@ -330,6 +330,7 @@ public class ManhuntManager implements Listener, TabExecutor {
 					Location location = trackedLocations.get(ev.getPlayer().getUniqueId());
 					location.getBlock().setType(Material.LODESTONE);
 					CompassMeta compassMeta = (CompassMeta) compass.getItemMeta();
+					compassMeta.setLodestoneTracked(false);
 					compassMeta.setLodestone(location);
 					compass.setItemMeta(compassMeta);
 				}

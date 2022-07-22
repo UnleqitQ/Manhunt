@@ -7,6 +7,7 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.util.*;
 
@@ -18,12 +19,15 @@ public class ManhuntInstance {
 	private Set<UUID> runners;
 	public Map<UUID, UUID> tracking;
 	private Set<UUID> died;
+	public Map<UUID, Map<UUID, Location>> locationPoints;
 	private Location spawn;
 	
 	private boolean running;
 	private long startingTime;
 	private boolean finished;
 	private boolean runnerWon;
+	
+	private BukkitTask task;
 	
 	
 	public ManhuntInstance(UUID owner) {
@@ -32,6 +36,7 @@ public class ManhuntInstance {
 		runners = new HashSet<>();
 		tracking = new HashMap<>();
 		died = new HashSet<>();
+		locationPoints = new HashMap<>();
 		Bukkit.getPlayer(owner).sendMessage("Created manhunt");
 	}
 	
@@ -167,10 +172,14 @@ public class ManhuntInstance {
 				player.setSaturatedRegenRate(10);
 				player.teleport(location);
 			}
+			locationPoints.put(uuid, new HashMap<>());
 		}
 		spawn = location;
 		startingTime = System.currentTimeMillis();
 		running = true;
+		if (task != null)
+			task.cancel();
+		task = Bukkit.getScheduler().runTaskTimer(Manhunt.plugin, this::updateLocations, 0, 40);
 	}
 	
 	public UUID getOwner() {
@@ -190,6 +199,8 @@ public class ManhuntInstance {
 	}
 	
 	public void stop() {
+		if (task != null)
+			task.cancel();
 		Bukkit.getPlayer(owner).sendMessage("Stopped manhunt");
 		for (UUID uuid : hunters) {
 			Manhunt.plugin.manager.playerInstances.remove(uuid);
@@ -278,6 +289,17 @@ public class ManhuntInstance {
 			died.add(uuid);
 			if (died.size() >= runners.size()) {
 				onHuntersWin();
+			}
+		}
+	}
+	
+	public void updateLocations() {
+		for (UUID runner : runners) {
+			if (!locationPoints.containsKey(runner))
+				locationPoints.put(runner, new HashMap<>());
+			Player p = Bukkit.getPlayer(runner);
+			if (p != null) {
+				locationPoints.get(runner).put(p.getWorld().getUID(), p.getLocation().clone());
 			}
 		}
 	}

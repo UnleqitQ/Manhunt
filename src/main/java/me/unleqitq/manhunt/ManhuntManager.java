@@ -223,25 +223,31 @@ public class ManhuntManager implements Listener, TabExecutor {
 		UUID uuid = player.getUniqueId();
 		if (hasInstance(uuid)) {
 			if (getInstance(uuid).getHunters().contains(uuid)) {
+				ManhuntInstance instance = getInstance(uuid);
 				if (ev.getMaterial() == Material.COMPASS) {
 					if (ev.getAction() == Action.RIGHT_CLICK_AIR || ev.getAction() == Action.RIGHT_CLICK_BLOCK) {
-						OfflinePlayer tracking = Bukkit.getOfflinePlayer(getInstance(uuid).tracking.get(uuid));
+						OfflinePlayer tracking = Bukkit.getOfflinePlayer(instance.tracking.get(uuid));
 						if (!tracking.isOnline()) {
 							player.sendMessage("The player is not online");
 							return;
 						}
 						if (player.getWorld().equals(((Player) tracking).getWorld())) {
 							// player.setCompassTarget(tracking.getLocation());
-							track(player, (Player) tracking, ev.getItem());
+							track(player, (Player) tracking, ev.getItem(), instance);
+						}
+						else if (instance.locationPoints.get(tracking.getUniqueId()).containsKey(
+								player.getWorld().getUID())) {
+							// player.setCompassTarget(tracking.getLocation());
+							track(player, (Player) tracking, ev.getItem(), instance);
 						}
 						else {
-							player.sendMessage("The player is not in your world");
+							player.sendMessage("The player never was in this world!");
 						}
 						ev.setCancelled(true);
 					}
 					if (ev.getAction() == Action.LEFT_CLICK_AIR || ev.getAction() == Action.LEFT_CLICK_BLOCK) {
 						Inventory inv = Bukkit.createInventory(player, 27, "Players");
-						for (UUID runnerUuid : getInstance(uuid).getRunners()) {
+						for (UUID runnerUuid : instance.getRunners()) {
 							OfflinePlayer runner = Bukkit.getOfflinePlayer(runnerUuid);
 							if (runner.isOnline()) {
 								ItemStack head = new ItemStack(Material.PLAYER_HEAD);
@@ -249,7 +255,7 @@ public class ManhuntManager implements Listener, TabExecutor {
 								meta.setOwningPlayer(runner);
 								meta.setDisplayName(((Player) runner).getDisplayName());
 								List<String> lore = new ArrayList<>();
-								lore.add("�5Track Player");
+								lore.add("§5Track Player");
 								meta.setLore(lore);
 								head.setItemMeta(meta);
 								inv.addItem(head);
@@ -263,9 +269,14 @@ public class ManhuntManager implements Listener, TabExecutor {
 		}
 	}
 	
-	public void track(Player player, Player target, ItemStack item) {
-		Location location = new Location(target.getWorld(), target.getLocation().getBlockX(), 255,
-				target.getLocation().getBlockZ());
+	public void track(Player player, Player target, ItemStack item, ManhuntInstance instance) {
+		Location location;
+		if (target.getWorld().getUID().equals(player.getWorld().getUID())) {
+			location = target.getLocation().clone();
+		}
+		else {
+			location = instance.locationPoints.get(target.getUniqueId()).get(player.getWorld().getUID());
+		}
 		boolean otherTracking = false;
 		for (Map.Entry<UUID, Location> entry : trackedLocations.entrySet()) {
 			if (!entry.getKey().equals(player.getUniqueId())) {
@@ -338,18 +349,7 @@ public class ManhuntManager implements Listener, TabExecutor {
 			final ManhuntInstance instance = getInstance(ev.getPlayer().getUniqueId());
 			if (instance.isRunning()) {
 				if (ev.getPlayer().getBedSpawnLocation() == null) {
-					Bukkit.getScheduler().runTaskLater(Manhunt.plugin, () -> {
-						ev.getPlayer().teleport(instance.getSpawn());
-					}, 10);
-					Bukkit.getScheduler().runTaskLater(Manhunt.plugin, () -> {
-						ev.getPlayer().teleport(instance.getSpawn());
-					}, 20);
-					Bukkit.getScheduler().runTaskLater(Manhunt.plugin, () -> {
-						ev.getPlayer().teleport(instance.getSpawn());
-					}, 30);
-					Bukkit.getScheduler().runTaskLater(Manhunt.plugin, () -> {
-						ev.getPlayer().teleport(instance.getSpawn());
-					}, 40);
+					ev.setRespawnLocation(instance.getSpawn());
 				}
 			}
 		}

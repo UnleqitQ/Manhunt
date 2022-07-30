@@ -26,6 +26,7 @@ import java.util.UUID;
 public class Manhunt extends JavaPlugin {
 	
 	private static Manhunt instance;
+	public Object papi;
 	public static Map<UUID, IManhuntInstance> instanceMap = new HashMap<>();
 	public static Map<UUID, ManhuntDefinition> definitionMap = new HashMap<>();
 	public static Map<UUID, Map.Entry<UUID, ManhuntEndEvent.Side>> requests = new HashMap<>();
@@ -35,14 +36,17 @@ public class Manhunt extends JavaPlugin {
 	public void onEnable() {
 		instance = this;
 		commandManager = new CommandManager(this);
-		if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+		if (Bukkit.getPluginManager().isPluginEnabled("PlaceholderAPI")) {
+			papi = new ManhuntPapi();
+			((ManhuntPapi) papi).register();
 		}
 		registerCommands();
 	}
 	
 	@Override
 	public void onDisable() {
-		if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+		if (papi != null) {
+			((ManhuntPapi) papi).unregister();
 		}
 	}
 	

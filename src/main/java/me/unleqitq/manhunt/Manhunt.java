@@ -223,9 +223,9 @@ public class Manhunt extends JavaPlugin {
 				settingsBuilder.subCommand("remove").argument(PlayerArgument.of("player")).handler(c -> {
 					Player sender = (Player) c.getSender();
 					Player player = c.get("player");
-					ManhuntEndEvent.Side type = c.get("type");
 					
-					requests.put(player.getUniqueId(), Map.entry(sender.getUniqueId(), type));
+					getDefinition(sender.getUniqueId()).hunters.remove(player.getUniqueId());
+					getDefinition(sender.getUniqueId()).runners.remove(player.getUniqueId());
 					sender.sendMessage("§6Manhunt >> §aRemoved " + player.getName());
 					player.sendMessage("§6Manhunt >> §aYou were removed from the manhunt");
 					

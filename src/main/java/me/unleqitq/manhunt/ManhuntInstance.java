@@ -1,285 +1,197 @@
 package me.unleqitq.manhunt;
 
-import org.bukkit.*;
-import org.bukkit.advancement.Advancement;
-import org.bukkit.advancement.AdvancementProgress;
-import org.bukkit.attribute.Attribute;
-import org.bukkit.enchantments.Enchantment;
+import me.unleqitq.manhunt.api.IManhuntInstance;
+import me.unleqitq.manhunt.api.ManhuntDefinition;
+import me.unleqitq.manhunt.api.ManhuntEndEvent;
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.entity.EnderDragon;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.HandlerList;
+import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.CompassMeta;
+import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.util.Vector;
 
 import java.util.*;
 
-
-public class ManhuntInstance {
+public class ManhuntInstance implements IManhuntInstance, Listener {
 	
-	private UUID owner;
-	private Set<UUID> hunters;
-	private Set<UUID> runners;
-	public Map<UUID, UUID> tracking;
-	private Set<UUID> died;
-	private Location spawn;
+	private final Map<UUID, Map<UUID, Vector>> lastLocations = new HashMap<>();
 	
-	private boolean running;
-	private long startingTime;
-	private boolean finished;
-	private boolean runnerWon;
+	private final ManhuntDefinition definition;
+	private final Set<UUID> deadRunners = new HashSet<>();
+	private final long startMillis;
 	
-	
-	public ManhuntInstance(UUID owner) {
-		this.owner = owner;
-		hunters = new HashSet<>();
-		runners = new HashSet<>();
-		tracking = new HashMap<>();
-		died = new HashSet<>();
-		Bukkit.getPlayer(owner).sendMessage("Created manhunt");
+	public ManhuntInstance(ManhuntDefinition definition) {
+		this.definition = definition;
+		startMillis = System.currentTimeMillis();
 	}
 	
-	
-	public boolean isRunning() {
-		return running;
-	}
-	
-	public long getStartingTime() {
-		return startingTime;
-	}
-	
-	public void setOwner(UUID owner) {
-		this.owner = owner;
-	}
-	
-	public void addHunter(UUID player) {
-		if (Manhunt.plugin.manager.hasInstance(player)) {
-			if (Manhunt.plugin.manager.getInstance(player) != this) {
-				Bukkit.getPlayer(owner).sendMessage("This player is already part of another manhunt");
-			}
-		}
-		hunters.add(player);
-		runners.remove(player);
-		Manhunt.plugin.manager.playerInstances.put(player, this);
-		Bukkit.getPlayer(owner).sendMessage(
-				"Added " + Bukkit.getPlayer(player).getName() + "(" + player + ") as hunter");
-	}
-	
-	public void addRunner(UUID player) {
-		if (Manhunt.plugin.manager.hasInstance(player)) {
-			if (Manhunt.plugin.manager.getInstance(player) != this) {
-				Bukkit.getPlayer(owner).sendMessage("This player is already part of another manhunt");
-			}
-		}
-		hunters.remove(player);
-		runners.add(player);
-		Manhunt.plugin.manager.playerInstances.put(player, this);
-		Bukkit.getPlayer(owner).sendMessage(
-				"Added " + Bukkit.getPlayer(player).getName() + "(" + player + ") as runner");
-	}
-	
-	public void removeHunter(UUID player) {
-		if (!Manhunt.plugin.manager.hasInstance(player) || Manhunt.plugin.manager.getInstance(player) != this) {
-			Bukkit.getPlayer(owner).sendMessage("This player is not in your manhunt");
-			return;
-		}
-		if (hunters.remove(player)) {
-			Bukkit.getPlayer(owner).sendMessage(
-					"Removed " + Bukkit.getPlayer(player).getName() + "(" + player + ") from hunters");
-		}
-		if (player != owner)
-			Manhunt.plugin.manager.playerInstances.remove(player);
-	}
-	
-	public void removeRunner(UUID player) {
-		if (!Manhunt.plugin.manager.hasInstance(player) || Manhunt.plugin.manager.getInstance(player) != this) {
-			Bukkit.getPlayer(owner).sendMessage("This player is not in your manhunt");
-			return;
-		}
-		if (runners.remove(player)) {
-			Bukkit.getPlayer(owner).sendMessage(
-					"Removed " + Bukkit.getPlayer(player).getName() + "(" + player + ") from runners");
-		}
-		runners.remove(player);
-		if (player != owner)
-			Manhunt.plugin.manager.playerInstances.remove(player);
-		Bukkit.getPlayer(owner).sendMessage(
-				"Removed " + Bukkit.getPlayer(player).getName() + "(" + player + ") from runners");
-	}
-	
-	public void start(Location location) {
-		if (hunters.size() == 0) {
-			Bukkit.getPlayer(owner).sendMessage("You need at least 1 hunter");
-			return;
-		}
-		if (runners.size() == 0) {
-			Bukkit.getPlayer(owner).sendMessage("You need at least 1 runner");
-			return;
-		}
-		Bukkit.getPlayer(owner).sendMessage("Started manhunt");
-		UUID runner = (UUID) runners.toArray()[0];
-		for (UUID uuid : hunters) {
-			tracking.put(uuid, runner);
-		}
-		for (UUID uuid : hunters) {
-			Player player = Bukkit.getPlayer(uuid);
-			if (player != null) {
-				for (Iterator<Advancement> iterator = Bukkit.advancementIterator(); iterator.hasNext(); ) {
-					Advancement advancement = iterator.next();
-					AdvancementProgress progress = player.getAdvancementProgress(advancement);
-					for (String criteria : progress.getAwardedCriteria())
-						progress.revokeCriteria(criteria);
-				}
-				player.getInventory().clear();
-				ItemStack compass = new ItemStack(Material.COMPASS);
-				compass.addEnchantment(Enchantment.VANISHING_CURSE, 1);
-				player.getInventory().addItem(compass);
-				player.setGameMode(GameMode.SURVIVAL);
-				player.setInvisible(false);
-				player.setInvulnerable(false);
-				player.setAllowFlight(false);
-				player.setBedSpawnLocation(location, true);
-				player.giveExpLevels(-1000);
-				player.setHealth(player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
-				player.setSaturation(5);
-				player.setFoodLevel(20);
-				player.setExhaustion(0);
-				player.setSaturatedRegenRate(10);
-				player.teleport(location);
-			}
-		}
-		for (UUID uuid : runners) {
-			Player player = Bukkit.getPlayer(uuid);
-			if (player != null) {
-				for (Iterator<Advancement> iterator = Bukkit.advancementIterator(); iterator.hasNext(); ) {
-					Advancement advancement = iterator.next();
-					AdvancementProgress progress = player.getAdvancementProgress(advancement);
-					for (String criteria : progress.getAwardedCriteria())
-						progress.revokeCriteria(criteria);
-				}
-				player.getInventory().clear();
-				player.setGameMode(GameMode.SURVIVAL);
-				player.setInvisible(false);
-				player.setInvulnerable(false);
-				player.setAllowFlight(false);
-				player.setBedSpawnLocation(location, true);
-				player.giveExpLevels(-1000);
-				player.setHealth(player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
-				player.setSaturation(5);
-				player.setFoodLevel(20);
-				player.setExhaustion(0);
-				player.setSaturatedRegenRate(10);
-				player.teleport(location);
-			}
-		}
-		spawn = location;
-		startingTime = System.currentTimeMillis();
-		running = true;
-	}
-	
-	public UUID getOwner() {
-		return owner;
-	}
-	
-	public Location getSpawn() {
-		return spawn;
-	}
-	
+	@Override
 	public Set<UUID> getHunters() {
-		return hunters;
+		return Collections.unmodifiableSet(definition.hunters);
 	}
 	
+	@Override
 	public Set<UUID> getRunners() {
-		return runners;
+		return Collections.unmodifiableSet(definition.runners);
 	}
 	
+	@Override
+	public Set<UUID> getDeadRunners() {
+		return Collections.unmodifiableSet(deadRunners);
+	}
+	
+	@Override
 	public void stop() {
-		Bukkit.getPlayer(owner).sendMessage("Stopped manhunt");
-		for (UUID uuid : hunters) {
-			Manhunt.plugin.manager.playerInstances.remove(uuid);
-		}
-		for (UUID uuid : runners) {
-			Manhunt.plugin.manager.playerInstances.remove(uuid);
-		}
-		Manhunt.plugin.manager.playerInstances.remove(owner);
-		Manhunt.plugin.manager.instances.remove(this);
+		HandlerList.unregisterAll(this);
+		Bukkit.getPluginManager().callEvent(new ManhuntEndEvent(this, null));
+		Manhunt.instanceMap.remove(definition.owner);
 	}
 	
-	public void write(UUID uuid) {
-		Player player = Bukkit.getPlayer(uuid);
-		player.sendMessage(ChatColor.GOLD + "--- Hunters ---");
-		for (UUID pl : hunters) {
-			player.sendMessage(Bukkit.getOfflinePlayer(pl).getName());
-		}
-		player.sendMessage(ChatColor.GOLD + "--- Runners ---");
-		for (UUID pl : runners) {
-			player.sendMessage(Bukkit.getOfflinePlayer(pl).getName());
-		}
+	@Override
+	public long getStartMillis() {
+		return startMillis;
 	}
 	
 	
-	public void onHuntersWin() {
-		finished = true;
-		for (UUID uuid : hunters) {
-			if (Bukkit.getPlayer(uuid) != null) {
-				Player player = Bukkit.getPlayer(uuid);
-				player.sendMessage(
-						ChatColor.RED + "" + ChatColor.BOLD + "================================================================");
-				player.sendMessage("");
-				player.sendMessage(ChatColor.RED + "YOU WON");
-				player.sendMessage("");
-				player.sendMessage(
-						ChatColor.RED + "" + ChatColor.BOLD + "================================================================");
+	@EventHandler
+	public void onRunnerAttack(EntityDamageByEntityEvent event) {
+		if (definition.deadRunnersCanFight)
+			return;
+		if (event.getDamager() instanceof Player damager) {
+			if (event.getEntity() instanceof Player damagee) {
+				if (deadRunners.contains(damager.getUniqueId()) && definition.hunters.contains(damagee.getUniqueId())) {
+					event.setCancelled(true);
+				}
 			}
 		}
-		for (UUID uuid : runners) {
-			if (Bukkit.getPlayer(uuid) != null) {
-				Player player = Bukkit.getPlayer(uuid);
-				player.sendMessage(
-						ChatColor.RED + "" + ChatColor.BOLD + "================================================================");
-				player.sendMessage("");
-				player.sendMessage(ChatColor.RED + "YOU LOST");
-				player.sendMessage("");
-				player.sendMessage(
-						ChatColor.RED + "" + ChatColor.BOLD + "================================================================");
+		else if (event.getDamager() instanceof Projectile projectile &&
+				projectile.getShooter() instanceof Player damager) {
+			if (event.getEntity() instanceof Player damagee) {
+				if (deadRunners.contains(damager.getUniqueId()) && definition.hunters.contains(damagee.getUniqueId())) {
+					event.setCancelled(true);
+				}
 			}
 		}
-		stop();
 	}
 	
-	public void onRunnerWin() {
-		finished = true;
-		runnerWon = true;
-		for (UUID uuid : runners) {
-			if (Bukkit.getPlayer(uuid) != null) {
-				Player player = Bukkit.getPlayer(uuid);
-				player.sendMessage(
-						ChatColor.RED + "" + ChatColor.BOLD + "================================================================");
-				player.sendMessage("");
-				player.sendMessage(ChatColor.RED + "YOU WON");
-				player.sendMessage("");
-				player.sendMessage(
-						ChatColor.RED + "" + ChatColor.BOLD + "================================================================");
+	@EventHandler
+	public void onRunnerDeath(PlayerDeathEvent event) {
+		if (definition.runners.contains(event.getPlayer().getUniqueId())) {
+			deadRunners.add(event.getPlayer().getUniqueId());
+			if (deadRunners.size() == definition.runners.size()) {
+				HandlerList.unregisterAll(this);
+				Bukkit.getPluginManager().callEvent(new ManhuntEndEvent(this, ManhuntEndEvent.Side.HUNTER));
+				Manhunt.instanceMap.remove(definition.owner);
 			}
 		}
-		for (UUID uuid : hunters) {
-			if (Bukkit.getPlayer(uuid) != null) {
-				Player player = Bukkit.getPlayer(uuid);
-				player.sendMessage(
-						ChatColor.RED + "" + ChatColor.BOLD + "================================================================");
-				player.sendMessage("");
-				player.sendMessage(ChatColor.RED + "YOU LOST");
-				player.sendMessage("");
-				player.sendMessage(
-						ChatColor.RED + "" + ChatColor.BOLD + "================================================================");
-			}
-		}
-		stop();
 	}
 	
-	public void death(UUID uuid) {
-		if (runners.contains(uuid)) {
-			died.add(uuid);
-			if (died.size() >= runners.size()) {
-				onHuntersWin();
+	@EventHandler
+	public void onDragonDeath(EntityDeathEvent event) {
+		if (event.getEntity() instanceof EnderDragon dragon) {
+			if (dragon.getWorld().getUID().equals(definition.endWorld)) {
+				HandlerList.unregisterAll(this);
+				Bukkit.getPluginManager().callEvent(new ManhuntEndEvent(this, ManhuntEndEvent.Side.RUNNER));
+				Manhunt.instanceMap.remove(definition.owner);
 			}
 		}
 	}
+	
+	
+	@EventHandler
+	public void onRunnerMove(PlayerMoveEvent event) {
+		if (definition.runners.contains(event.getPlayer().getUniqueId())) {
+			lastLocations.putIfAbsent(event.getPlayer().getUniqueId(), new HashMap<>());
+			lastLocations.get(event.getPlayer().getUniqueId())
+					.put(event.getPlayer().getWorld().getUID(), event.getTo().toVector());
+		}
+	}
+	
+	@EventHandler
+	public void onCompassClick(PlayerInteractEvent event) {
+		if (definition.hunters.contains(event.getPlayer().getUniqueId())) {
+			ItemStack item = event.getItem();
+			if (item == null || item.getType() != Material.COMPASS)
+				return;
+			CompassMeta meta = (CompassMeta) item.getItemMeta();
+			if (event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+				if (meta.getPersistentDataContainer().has(new NamespacedKey(Manhunt.getInstance(), "target"))) {
+					long[] targetPrim = meta.getPersistentDataContainer()
+							.get(new NamespacedKey(Manhunt.getInstance(), "target"), PersistentDataType.LONG_ARRAY);
+					UUID target = new UUID(targetPrim[0], targetPrim[1]);
+					if (!lastLocations.containsKey(target)) {
+						event.getPlayer().sendMessage("§4Somehow the runner is not found here!");
+						return;
+					}
+					if (!lastLocations.get(target).containsKey(event.getPlayer().getWorld().getUID())) {
+						event.getPlayer().sendMessage("§4The runner has never been in this world!");
+						return;
+					}
+					meta.setLodestoneTracked(false);
+					meta.setLodestone(lastLocations.get(target).get(event.getPlayer().getWorld().getUID())
+							.toLocation(event.getPlayer().getWorld()));
+				}
+			}
+			else {
+				Inventory inv = Bukkit.createInventory(event.getPlayer(), 6 * 9);
+				for (UUID runner : definition.runners) {
+					ItemStack headItem = new ItemStack(Material.PLAYER_HEAD);
+					SkullMeta skullMeta = (SkullMeta) headItem.getItemMeta();
+					skullMeta.setOwningPlayer(Bukkit.getOfflinePlayer(runner));
+					skullMeta.setDisplayName(Bukkit.getOfflinePlayer(runner).getName());
+					headItem.setItemMeta(skullMeta);
+					inv.addItem(headItem);
+				}
+			}
+			item.setItemMeta(meta);
+		}
+	}
+	
+	@EventHandler
+	public void onHeadClick(InventoryClickEvent event) {
+		if (definition.hunters.contains(event.getWhoClicked().getUniqueId())) {
+			ItemStack compassItem = event.getWhoClicked().getInventory().getItemInMainHand();
+			if (event.getCurrentItem().getType() == Material.PLAYER_HEAD)
+				event.setCancelled(true);
+			else
+				return;
+			if (compassItem.getType() != Material.COMPASS)
+				return;
+			CompassMeta meta = (CompassMeta) compassItem.getItemMeta();
+			SkullMeta skullMeta = (SkullMeta) event.getCurrentItem().getItemMeta();
+			meta.getPersistentDataContainer()
+					.set(new NamespacedKey(Manhunt.getInstance(), "target"), PersistentDataType.LONG_ARRAY, new long[]{
+							skullMeta.getOwningPlayer().getUniqueId().getMostSignificantBits(),
+							skullMeta.getOwningPlayer().getUniqueId().getLeastSignificantBits()
+					});
+			if (!lastLocations.get(skullMeta.getOwningPlayer().getUniqueId())
+					.containsKey(event.getWhoClicked().getWorld().getUID())) {
+				event.getWhoClicked().sendMessage("§4The runner has never been in this world!");
+			}
+			else {
+				meta.setLodestoneTracked(false);
+				meta.setLodestone(lastLocations.get(skullMeta.getOwningPlayer().getUniqueId())
+						.get(event.getWhoClicked().getWorld().getUID()).toLocation(event.getWhoClicked().getWorld()));
+			}
+			compassItem.setItemMeta(meta);
+		}
+	}
+	
 	
 }

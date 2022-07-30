@@ -1,10 +1,7 @@
 name: Manhunt
 version: '${project.version}'
 main: me.unleqitq.manhunt.Manhunt
-api-version: 1.17
+api-version: 1.18
 load: STARTUP
 softdepend: [ PlaceholderAPI ]
 authors: [ UnleqitQ ]
-commands:
-  manhunt:
-    description: Manhunt

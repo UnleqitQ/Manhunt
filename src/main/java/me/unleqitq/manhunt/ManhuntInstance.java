@@ -4,6 +4,7 @@ import me.unleqitq.manhunt.api.IManhuntInstance;
 import me.unleqitq.manhunt.api.ManhuntDefinition;
 import me.unleqitq.manhunt.api.ManhuntEndEvent;
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.EnderDragon;
@@ -94,7 +95,18 @@ public class ManhuntInstance implements IManhuntInstance, Listener {
 	public void onRunnerDeath(PlayerDeathEvent event) {
 		if (definition.runners.contains(event.getPlayer().getUniqueId())) {
 			deadRunners.add(event.getPlayer().getUniqueId());
-			if (deadRunners.size() == definition.runners.size()) {
+			if (definition.allRunnersMustDie) {
+				if (deadRunners.size() == definition.runners.size()) {
+					HandlerList.unregisterAll(this);
+					Bukkit.getPluginManager().callEvent(new ManhuntEndEvent(this, ManhuntEndEvent.Side.HUNTER));
+					Manhunt.instanceMap.remove(definition.owner);
+				}
+				else if (!definition.deadRunnersCanContinue) {
+					Bukkit.getScheduler()
+							.runTask(Manhunt.getInstance(), () -> event.getPlayer().setGameMode(GameMode.SPECTATOR));
+				}
+			}
+			else {
 				HandlerList.unregisterAll(this);
 				Bukkit.getPluginManager().callEvent(new ManhuntEndEvent(this, ManhuntEndEvent.Side.HUNTER));
 				Manhunt.instanceMap.remove(definition.owner);
